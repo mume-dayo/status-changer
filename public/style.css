@@ -1,0 +1,203 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+    background: #0a0a0a;
+    background-image:
+        radial-gradient(circle at 20% 50%, rgba(88, 101, 242, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(114, 137, 218, 0.1) 0%, transparent 50%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid rgba(88, 101, 242, 0.2);
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(88, 101, 242, 0.1);
+    padding: 40px;
+    max-width: 700px;
+    width: 100%;
+    backdrop-filter: blur(10px);
+}
+
+h1 {
+    color: #fff;
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 32px;
+    text-shadow: 0 0 20px rgba(88, 101, 242, 0.5);
+    letter-spacing: 1px;
+}
+
+h3 {
+    color: #fff;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #b9bbbe;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 12px;
+    background: rgba(30, 30, 30, 0.8);
+    border: 2px solid rgba(88, 101, 242, 0.3);
+    border-radius: 8px;
+    font-size: 14px;
+    color: #fff;
+    transition: all 0.3s;
+    font-family: inherit;
+}
+
+select.activity-select {
+    cursor: pointer;
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: #5865F2;
+    background: rgba(40, 40, 40, 0.9);
+    box-shadow: 0 0 20px rgba(88, 101, 242, 0.3);
+}
+
+input::placeholder, textarea::placeholder {
+    color: #72767d;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #5865F2 0%, #7289DA 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+button:hover::before {
+    left: 100%;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(88, 101, 242, 0.4);
+}
+
+button:disabled {
+    background: #2c2f33;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+button.disconnect-btn {
+    background: linear-gradient(135deg, #f04747 0%, #d84040 100%);
+}
+
+button.disconnect-btn:hover {
+    box-shadow: 0 6px 25px rgba(240, 71, 71, 0.4);
+}
+
+.status-display {
+    margin-top: 30px;
+    padding: 20px;
+    background: rgba(30, 30, 30, 0.5);
+    border: 1px solid rgba(88, 101, 242, 0.2);
+    border-radius: 8px;
+}
+
+.status-info p {
+    color: #b9bbbe;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.status-info strong {
+    color: #5865F2;
+}
+
+.status-info span {
+    color: #fff;
+}
+
+.log-section {
+    margin-top: 30px;
+}
+
+.log-container {
+    max-height: 400px;
+    overflow-y: auto;
+    background: rgba(10, 10, 10, 0.8);
+    border: 1px solid rgba(88, 101, 242, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.log-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-container::-webkit-scrollbar-track {
+    background: rgba(30, 30, 30, 0.5);
+    border-radius: 4px;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+    background: rgba(88, 101, 242, 0.5);
+    border-radius: 4px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(88, 101, 242, 0.7);
+}
+
+#log {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    color: #b9bbbe;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

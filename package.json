@@ -1,0 +1,26 @@
+{
+  "name": "discord-status-server",
+  "version": "1.0.0",
+  "description": "Discord Status Changer - Server-side version that persists status even when browser tab is closed",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "discord",
+    "status",
+    "rich-presence",
+    "websocket"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
