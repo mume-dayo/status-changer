@@ -12,6 +12,9 @@ const logEl = getEl('log');
 
 let sessionId = null;
 let statusCheckInterval = null;
+let ws = null;
+let wsReconnectAttempts = 0;
+const MAX_WS_RECONNECT_ATTEMPTS = 5;
 
 function appendLog(message) {
     const timestamp = new Date().toLocaleTimeString('ja-JP');
@@ -23,6 +26,84 @@ function setControlsState(connected) {
     submitBtn.textContent = connected ? 'ステータス更新' : 'ステータス設定';
     disconnectBtn.disabled = !connected;
     tokenInput.disabled = connected;
+}
+
+function initWebSocket() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        return;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}`;
+
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+        appendLog('WebSocket接続成功');
+        wsReconnectAttempts = 0;
+
+        if (sessionId) {
+            ws.send(JSON.stringify({
+                type: 'register',
+                sessionId: sessionId
+            }));
+        }
+    };
+
+    ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+
+            switch (data.type) {
+                case 'hello':
+                    appendLog('リアルタイム通信が有効になりました');
+                    break;
+
+                case 'discord_ready':
+                    appendLog(data.message);
+                    break;
+
+                case 'discord_disconnected':
+                    appendLog(data.message);
+                    break;
+
+                case 'status_updated':
+                    appendLog('ステータスが更新されました');
+                    break;
+
+                case 'status':
+                    if (!data.connected && sessionId) {
+                        appendLog('Discord接続が切断されています');
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error('WebSocketメッセージエラー:', error);
+        }
+    };
+
+    ws.onerror = (error) => {
+        console.error('WebSocketエラー:', error);
+    };
+
+    ws.onclose = () => {
+        appendLog('WebSocket切断');
+        ws = null;
+
+        if (sessionId && wsReconnectAttempts < MAX_WS_RECONNECT_ATTEMPTS) {
+            wsReconnectAttempts++;
+            appendLog(`WebSocket再接続試行中... (${wsReconnectAttempts}/${MAX_WS_RECONNECT_ATTEMPTS})`);
+            setTimeout(initWebSocket, 3000);
+        }
+    };
+}
+
+function closeWebSocket() {
+    if (ws) {
+        ws.close();
+        ws = null;
+        wsReconnectAttempts = 0;
+    }
 }
 
 
@@ -52,6 +133,9 @@ async function connectToServer() {
             appendLog('接続に成功しました');
             appendLog(`Session ID: ${sessionId}`);
             setControlsState(true);
+
+            // WebSocket接続を開始
+            initWebSocket();
 
             startStatusCheck();
 
@@ -167,6 +251,7 @@ async function disconnect() {
             sessionId = null;
             setControlsState(false);
             stopStatusCheck();
+            closeWebSocket();
         } else {
             appendLog(`切断エラー: ${data.error}`);
         }
