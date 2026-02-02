@@ -2,11 +2,15 @@ const express = require('express');
 const WebSocket = require('ws');
 const path = require('path');
 const fetch = require('node-fetch');
+const http = require('http');
 
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 3000;
 
 const activeConnections = new Map();
+const clientWebSockets = new Map();
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -35,6 +39,7 @@ class DiscordConnection {
     this.heartbeatAcked = true;
     this.shouldReconnect = true;
     this.currentActivity = null;
+    this.keepAliveTask = null;
   }
 
   connect() {
@@ -53,6 +58,11 @@ class DiscordConnection {
       this.ws.on('close', (code) => {
         console.log(`[${this.sessionId}] Connection closed (Code: ${code})`);
         this.cleanup();
+
+        notifyClient(this.sessionId, {
+          type: 'discord_disconnected',
+          message: '切断されました。再接続中...'
+        });
 
         if (this.shouldReconnect) {
           setTimeout(() => this.connect(), 5000);
@@ -111,6 +121,14 @@ class DiscordConnection {
       case 0:
         if (t === 'READY') {
           console.log(`[${this.sessionId}] Login successful`);
+          notifyClient(this.sessionId, {
+            type: 'discord_ready',
+            message: 'Discord接続成功'
+          });
+
+          // 常時オンライン状態を維持するための定期更新を開始
+          this.startKeepAlive();
+
           if (resolve) {
             resolve(this);
             if (this.currentActivity) {
@@ -170,12 +188,55 @@ class DiscordConnection {
 
     this.ws.send(JSON.stringify(presenceUpdate));
     console.log(`[${this.sessionId}] Presence updated`);
+
+    // クライアントに通知
+    notifyClient(this.sessionId, {
+      type: 'status_updated',
+      activity: this.currentActivity
+    });
+  }
+
+  startKeepAlive() {
+    // 1分ごとにオンライン状態を維持するためにステータスを再送信
+    if (this.keepAliveTask) {
+      clearInterval(this.keepAliveTask);
+    }
+
+    this.keepAliveTask = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        // 現在のアクティビティを再送信してオンライン状態を維持
+        const presenceUpdate = {
+          op: 3,
+          d: {
+            since: 0,
+            activities: this.currentActivity && this.currentActivity.name ? [{
+              name: this.currentActivity.name,
+              type: parseInt(this.currentActivity.type),
+              details: this.currentActivity.details,
+              state: this.currentActivity.state,
+              assets: this.currentActivity.imageUrl ? {
+                large_image: this.currentActivity.imageUrl,
+                large_text: this.currentActivity.imageText
+              } : {}
+            }] : [],
+            status: 'online',
+            afk: false
+          }
+        };
+        this.ws.send(JSON.stringify(presenceUpdate));
+        console.log(`[${this.sessionId}] Keep-alive: Online status maintained`);
+      }
+    }, 60 * 1000); // 1分ごと
   }
 
   cleanup() {
     if (this.heartbeatTask) {
       clearInterval(this.heartbeatTask);
       this.heartbeatTask = null;
+    }
+    if (this.keepAliveTask) {
+      clearInterval(this.keepAliveTask);
+      this.keepAliveTask = null;
     }
   }
 
@@ -186,6 +247,12 @@ class DiscordConnection {
       this.ws.close();
     }
     this.cleanup();
+
+    // クライアントに切断を通知
+    notifyClient(this.sessionId, {
+      type: 'session_ended',
+      message: 'セッションが終了しました'
+    });
   }
 }
 
@@ -360,7 +427,55 @@ app.get('/api/sessions', (req, res) => {
   res.json({ sessions });
 });
 
-app.listen(PORT, () => {
+// WebSocket接続処理
+wss.on('connection', (ws) => {
+  console.log('Client WebSocket connected');
+  let clientSessionId = null;
+
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+
+      if (data.type === 'register') {
+        clientSessionId = data.sessionId;
+        clientWebSockets.set(clientSessionId, ws);
+        console.log(`Client registered with session: ${clientSessionId}`);
+
+        // 接続状態を送信
+        const connection = activeConnections.get(clientSessionId);
+        if (connection) {
+          ws.send(JSON.stringify({
+            type: 'status',
+            connected: connection.ws && connection.ws.readyState === WebSocket.OPEN,
+            currentActivity: connection.currentActivity
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('WebSocket message error:', error);
+    }
+  });
+
+  ws.on('close', () => {
+    if (clientSessionId) {
+      clientWebSockets.delete(clientSessionId);
+      console.log(`Client WebSocket disconnected: ${clientSessionId}`);
+    }
+  });
+
+  // 初回接続時に挨拶
+  ws.send(JSON.stringify({ type: 'hello', message: 'WebSocket接続成功' }));
+});
+
+// Discord接続状態をクライアントに通知する関数
+function notifyClient(sessionId, data) {
+  const clientWs = clientWebSockets.get(sessionId);
+  if (clientWs && clientWs.readyState === WebSocket.OPEN) {
+    clientWs.send(JSON.stringify(data));
+  }
+}
+
+server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log('Discord Status Server started successfully');
 });
